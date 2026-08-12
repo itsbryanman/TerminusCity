@@ -26,13 +26,7 @@ Terminus City watches your local development activity, strips it down to a handf
 
 ---
 
-## The one-line pitch
 
-Most dev-activity tools ship your shell history to someone's dashboard. Terminus City is the opposite bet: **the sanitizer runs before the data is ever written, the relay only answers loopback, and the visualization is the only thing you ever look at.**
-
-It observes. It never modifies, replays, or re-executes a shell command.
-
----
 
 ## Quick start
 
@@ -59,8 +53,6 @@ To wire it to your actual shell, see [Shell integration](#shell-integration).
 
 <div align="center">
 
-<!-- Drop a recording here: docs/demo.gif -->
-*A screen recording lives at `docs/demo.gif`.*
 
 </div>
 
