@@ -1,0 +1,15 @@
+{
+  "name": "terminus-city",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local, procedural city for sanitized development activity.",
+  "bin": { "terminus": "./bin/terminus.mjs" },
+  "scripts": {
+    "dev": "node ./bin/terminus.mjs dev",
+    "start": "node ./bin/terminus.mjs start",
+    "test": "node --test",
+    "doctor": "node ./bin/terminus.mjs doctor"
+  },
+  "engines": { "node": ">=20" }
+}
