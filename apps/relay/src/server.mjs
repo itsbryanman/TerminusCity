@@ -7,10 +7,15 @@ import { fileURLToPath, URL } from 'node:url';
 import { EventStore } from '../../../packages/agent/src/store.mjs';
 import { defaultDataDirectory } from '../../../packages/agent/src/sanitizer.mjs';
 import { validateEvent } from '../../../packages/protocol/src/index.mjs';
+import { CollectorHost } from '../../../packages/agent/src/collectors/index.mjs';
+import { gitCollector } from '../../../packages/agent/src/collectors/git.mjs';
+import { systemCollector } from '../../../packages/agent/src/collectors/system.mjs';
+import { networkCollector } from '../../../packages/agent/src/collectors/network.mjs';
+import { containerCollector } from '../../../packages/agent/src/collectors/container.mjs';
 
 const rawRoot = fileURLToPath(new URL('../../web/', import.meta.url));
 const root = rawRoot.endsWith(sep) ? rawRoot : rawRoot + sep;
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 const json = (response, status, body) => { response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'vary': 'Origin', 'x-content-type-options': 'nosniff' }); response.end(JSON.stringify(body)); };
 
 export const websocketFrame = (payload) => {
@@ -44,6 +49,7 @@ export async function startRelay({ port = 31338, dataDirectory = defaultDataDire
   const clients = new Set();
   const pendingPong = new Set();
   const controlFile = join(dataDirectory, 'control.json');
+  let collectorHost;
   const control = async () => { try { return { paused: Boolean(JSON.parse(await readFile(controlFile, 'utf8')).paused) }; } catch { return { paused: false }; } };
   const broadcast = (event) => {
     const frame = websocketFrame({ kind: 'event', event });
@@ -60,7 +66,7 @@ export async function startRelay({ port = 31338, dataDirectory = defaultDataDire
     try {
       if (!isLocalRequest(request, server.address().port)) return json(response, 403, { error: 'Cross-origin request refused' });
       const requestUrl = new URL(request.url, 'http://127.0.0.1');
-      if (request.method === 'GET' && requestUrl.pathname === '/health') return json(response, 200, { ok: true, host: '127.0.0.1', skipped: store.skipped, ...(await control()) });
+      if (request.method === 'GET' && requestUrl.pathname === '/health') return json(response, 200, { ok: true, host: '127.0.0.1', skipped: store.skipped, collectors: collectorHost?.status() || {}, ...(await control()) });
       if (request.method === 'GET' && requestUrl.pathname === '/snapshot') return json(response, 200, await store.hydrate());
       if (request.method === 'GET' && requestUrl.pathname === '/events') return json(response, 200, { events: (await store.events()).filter((event) => event.seq > Number(requestUrl.searchParams.get('afterSeq') || 0)) });
       if (request.method === 'POST' && requestUrl.pathname === '/events') {
@@ -127,8 +133,10 @@ export async function startRelay({ port = 31338, dataDirectory = defaultDataDire
   });
   server.on('clientError', (err, socket) => socket.destroy());
   await new Promise((resolve) => server.listen(port, '127.0.0.1', resolve));
+  collectorHost = new CollectorHost({ collectors: [gitCollector, systemCollector, networkCollector, containerCollector], dataDirectory, dispatch: async (event) => broadcast(await store.append(validateEvent(event))), isPaused: async () => (await control()).paused }).start();
   const closeRelay = async () => {
     clearInterval(pingTimer);
+    collectorHost?.stop();
     for (const socket of clients) socket.destroy();
     clients.clear(); pendingPong.clear();
     await new Promise((resolve) => { const timer = setTimeout(resolve, 2000); server.close(() => { clearTimeout(timer); resolve(); }); });

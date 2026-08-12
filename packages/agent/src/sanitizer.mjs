@@ -28,6 +28,7 @@ export function classifyCommand(command, subcommand) {
 export function cwdKey(cwd, localSecret = 'terminus-city-local') {
   return `path_${createHash('sha256').update(`${localSecret}:${resolve(cwd)}`).digest('hex').slice(0, 16)}`;
 }
+export function privateKey(prefix, value, localSecret = process.env.TERMINUS_CITY_KEY || 'terminus-city-local') { return `${prefix}_${createHash('sha256').update(`${localSecret}:${value}`).digest('hex').slice(0, 16)}`; }
 
 /** Parses only the first two whitespace-separated tokens. Command must be in COMMAND_FAMILIES; anything else is recorded as 'other'. */
 export function sanitizeCommandLine(raw, cwd = process.cwd(), options = {}) {
@@ -46,5 +47,6 @@ export function commandFinishedEvent(raw, { cwd = process.cwd(), exitCode = 0, d
   const payload = sanitizeCommandLine(raw, cwd, { localSecret });
   return createEvent('shell.command.finished', { ...payload, exitCode: Math.max(0, Math.min(255, Number(exitCode) || 0)), durationMs: Math.max(0, Math.min(86_400_000, Number(durationMs) || 0)) }, { hostId, sessionId });
 }
+export function commandStartedEvent(raw, { cwd = process.cwd(), pairId = randomUUID(), hostId = 'local', sessionId = randomUUID(), localSecret } = {}) { return createEvent('shell.command.started', { ...sanitizeCommandLine(raw, cwd, { localSecret }), pairId }, { hostId, sessionId }); }
 
 export const defaultDataDirectory = () => process.env.TERMINUS_CITY_DATA_DIR || resolve(process.env.XDG_DATA_HOME || resolve(homedir(), '.local', 'share'), 'terminus-city');

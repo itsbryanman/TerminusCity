@@ -19,7 +19,7 @@ const cmdPayload = { command: 'git', category: 'git', subcommand: 'status', cwdK
 test('events() skips malformed lines and tracks skipped count', async () => {
   await withDir(async (dir) => {
     const e1 = createEvent('shell.command.finished', cmdPayload);
-    const e2 = createEvent('shell.command.finished', { ...cmdPayload, cwdKey: 'path_efgh5678efgh5678' });
+    const e2 = createEvent('shell.command.finished', { ...cmdPayload, cwdKey: 'path_efab5678efab5678' });
     const eventsFile = join(dir, 'events.jsonl');
     await writeFile(eventsFile, `${JSON.stringify({ ...e1, seq: 1 })}\n{truncated bad line\n${JSON.stringify({ ...e2, seq: 2 })}\n`);
     const store = new EventStore(dir);
@@ -81,5 +81,12 @@ test('snapshot flushes valid JSON atomically via store.close()', async () => {
     const parsed = JSON.parse(readFileSync(stateFile, 'utf8'));
     assert.ok(typeof parsed.lastSequence === 'number', 'state.json must have numeric lastSequence');
     assert.ok(parsed.state, 'state.json must have a state object');
+  });
+});
+test('ephemeral metrics reduce state without entering events.jsonl', async () => {
+  await withDir(async (dir) => {
+    const store = await new EventStore(dir).init();
+    await store.append(createEvent('system.metrics', { cpuPct: 1, memoryPct: 2, diskReadBps: 3, diskWriteBps: 4, networkRxBps: 5, networkTxBps: 6, load1: 7 }, { persist: false }));
+    assert.equal(store.sequence, 0); assert.equal(store.state.metrics.cpuPct, 1); assert.equal((await store.events()).length, 0);
   });
 });

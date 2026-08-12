@@ -102,6 +102,14 @@ test('GET / returns 200 text/html', async () => {
   });
 });
 
+test('GET /layout.mjs returns a JavaScript module MIME type', async () => {
+  await withRelay(async ({ port }) => {
+    const res = await fetchRelay(port, '/layout.mjs');
+    assert.equal(res.status, 200);
+    assert.ok(res.headers.get('content-type').startsWith('text/javascript'));
+  });
+});
+
 test('GET /../../package.json returns 404 (traversal blocked)', async () => {
   await withRelay(async ({ port }) => {
     const res = await fetchRelay(port, '/../../package.json');

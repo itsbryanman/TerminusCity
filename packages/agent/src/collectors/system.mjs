@@ -1,0 +1,8 @@
+import os from 'node:os';
+import { readFile } from 'node:fs/promises';
+import { createEvent } from '../../../protocol/src/index.mjs';
+
+const counters = async (file, index) => { try { return (await readFile(file, 'utf8')).split('\n').reduce((total, line) => total + (Number(line.trim().split(/\s+/)[index]) || 0), 0); } catch { return 0; } };
+export const systemCollector = { name: 'system', defaultEnabled: false, intervalMs: 5000, platforms: ['linux', 'darwin', 'win32'], description: 'Aggregate CPU, memory, disk, and network rates only; never processes or interface names.', async collect({ previous = {} }) {
+  const now = Date.now(); const cpu = os.cpus().reduce((sum, item) => sum + Object.values(item.times).reduce((part, n) => part + n, 0), 0); const idle = os.cpus().reduce((sum, item) => sum + item.times.idle, 0); const elapsed = Math.max(1, now - (previous.now || now)); const cpuPct = previous.cpu ? Math.max(0, Math.min(100, 100 - ((idle - previous.idle) / Math.max(1, cpu - previous.cpu)) * 100)) : 0; const disk = process.platform === 'linux' ? await counters('/proc/diskstats', 5) : 0; const network = process.platform === 'linux' ? await counters('/proc/net/dev', 1) : 0; const payload = { cpuPct, memoryPct: Math.max(0, Math.min(100, (1 - os.freemem() / os.totalmem()) * 100)), diskReadBps: previous.disk === undefined ? 0 : Math.max(0, (disk - previous.disk) * 512000 / elapsed), diskWriteBps: 0, networkRxBps: previous.network === undefined ? 0 : Math.max(0, (network - previous.network) * 1000 / elapsed), networkTxBps: 0, load1: process.platform === 'win32' ? 0 : os.loadavg()[0] || 0 }; const events = [createEvent('system.metrics', payload, { persist: false })]; return Object.assign(events, { state: { now, cpu, idle, disk, network } });
+} };

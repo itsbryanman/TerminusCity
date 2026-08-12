@@ -53,6 +53,11 @@ To wire it to your actual shell, see [Shell integration](#shell-integration).
 
 <div align="center">
 
+![Active Terminus City renderer](testing/renderer-active.png)
+
+![Terminus City active-to-paused flow](testing/renderer-overhaul.gif)
+
+![Paused Terminus City renderer](testing/renderer-paused.png)
 
 </div>
 
@@ -138,6 +143,7 @@ Files and directories are created owner-only (`0700` / `0600`) where the platfor
 | `terminus pause` | **Kill switch.** Stops collection immediately |
 | `terminus resume` | Resume collection |
 | `terminus emit CMD [SUB] [EXIT] [DURATION_MS]` | Send one sanitized event by hand |
+| `terminus collectors [enable\|disable NAME\|add-repo PATH]` | Manage opt-in activity collectors |
 | `terminus doctor` | Check the local installation |
 
 `pause` writes the collection flag directly to disk, so it works whether or not the relay is running. That's deliberate — a kill switch that depends on the thing it's killing isn't a kill switch.
@@ -196,6 +202,10 @@ The protocol validates a stable envelope and deliberately accepts unknown future
 | `network.summary` | 🚧 Reserved |
 
 Reserved types are accepted and stored but nothing emits them yet — the schema is ahead of the collectors on purpose.
+
+Collectors are disabled by default. `terminus collectors` explains each collector's retained data before you enable it. Git collection only checks repositories you explicitly add. Container activity is derived from already-sanitized shell activity; Terminus City intentionally does not read the root-equivalent Docker socket. Set `TERMINUS_CITY_TRACK_STARTED=1` before sourcing a shell hook to opt into command-started events and scaffolding; it is off by default because it adds a second lightweight CLI spawn per command.
+
+For exact Node test counts, wire the optional reporter into a test command with `node --test --test-reporter ./packages/agent/src/reporters/node-test.mjs`. It reports aggregate counts only.
 
 ---
 

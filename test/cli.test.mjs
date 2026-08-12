@@ -17,7 +17,8 @@ async function withDir(fn) {
 
 test('terminus pause writes control.json without the relay running', async () => {
   await withDir(async (dir) => {
-    const { stdout } = await execFileAsync(process.execPath, [cli, 'pause'], { env: { ...process.env, TERMINUS_CITY_DATA_DIR: dir } });
+    const env = { ...process.env, TERMINUS_CITY_DATA_DIR: dir }; delete env.NODE_TEST_CONTEXT;
+    const { stdout } = await execFileAsync(process.execPath, [cli, 'pause'], { env });
     assert.match(stdout, /paused/i, 'stdout must confirm collection was paused');
     const controlFile = join(dir, 'control.json');
     const parsed = JSON.parse(await readFile(controlFile, 'utf8'));
@@ -27,7 +28,8 @@ test('terminus pause writes control.json without the relay running', async () =>
 
 test('terminus resume writes control.json without the relay running', async () => {
   await withDir(async (dir) => {
-    const { stdout } = await execFileAsync(process.execPath, [cli, 'resume'], { env: { ...process.env, TERMINUS_CITY_DATA_DIR: dir } });
+    const env = { ...process.env, TERMINUS_CITY_DATA_DIR: dir }; delete env.NODE_TEST_CONTEXT;
+    const { stdout } = await execFileAsync(process.execPath, [cli, 'resume'], { env });
     assert.match(stdout, /resumed/i, 'stdout must confirm collection was resumed');
     const controlFile = join(dir, 'control.json');
     const parsed = JSON.parse(await readFile(controlFile, 'utf8'));

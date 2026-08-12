@@ -1,0 +1,2 @@
+/** Container activity is derived from sanitized shell events. We intentionally do not access Docker's root-equivalent socket. */
+export const containerCollector = { name: 'container', defaultEnabled: false, intervalMs: 30000, platforms: ['linux', 'darwin', 'win32'], description: 'Derived from sanitized docker/podman shell activity; does not access the container socket.', async collect() { return []; } };
